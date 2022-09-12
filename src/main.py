@@ -140,6 +140,9 @@ class App(ttk.Frame):
         #dark mode switch
         self.dark_mode_switch = ttk.Checkbutton(self.title_frame, text="Dark Mode", style="Switch.TCheckbutton", command=sv_ttk.toggle_theme)
         self.dark_mode_switch.grid(row=1, column=0, sticky="nsew")
+        #quit button
+        self.quit_button = ttk.Button(self.title_frame, text="Quit", command=self.quit, style="Accent.TButton")
+        self.quit_button.grid(row=2, column=0, sticky="nsew", columnspan=2)
         #version label
         self.version_label = ttk.Label(self.title_frame, text="©Mace Chettiyadan | Version 1.0.0", font=("-size", 10))
         self.version_label.grid(row=20, column=2, sticky="nsew")
