@@ -1,6 +1,5 @@
 import webbrowser
 import wikipedia
-import webbrowser
 from bs4 import BeautifulSoup as bs
 
 def get_page(name):
@@ -10,8 +9,7 @@ def get_page(name):
     return False
   
 def open_page(name):
-  url = wikipedia.page(name).url
-  webbrowser.open(url)
+  webbrowser.open(name)
 
 def extract_headers(html):
   # return headers from html string

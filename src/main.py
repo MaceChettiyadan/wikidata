@@ -1,22 +1,19 @@
 
 import io
-import math
 import tkinter as tk
 from tkinter import ttk
 import functions as f
 import sv_ttk
-import matplotlib.pyplot as plt
-import networkx as nx
 import tkinter as tk
-import matplotlib
-from matplotlib.backends.backend_tkagg import (
-    FigureCanvasTkAgg,
-    NavigationToolbar2Tk
-)
-matplotlib.use('TkAgg')
 import tkinter as tk
 from PIL import Image, ImageTk
 from urllib.request import urlopen
+from supabase import create_client, Client
+
+url = 'https://pqowrgcliihcpbmyiqio.supabase.co'
+key = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBxb3dyZ2NsaWloY3BibXlpcWlvIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTY2MzA2MTMzNiwiZXhwIjoxOTc4NjM3MzM2fQ.wJ77NwuINzY7JwL29wp_f1o4kZ1SRXjKgl6h7neVYlQ'
+supabase: Client = create_client(url, key)
+
 
 class App(ttk.Frame):
     def __init__(self, parent):
@@ -27,32 +24,20 @@ class App(ttk.Frame):
             self.columnconfigure(index=index, weight=1)
             self.rowconfigure(index=index, weight=1)
             
-        self.graphs = []
+        self.page = None
+        self.stats = []
         # Create widgets
         self.setup_gui() 
         
     def submit_wiki_name(self):
         self.error_label.config(text="")
         name = self.lookup_input.get()
-        page = f.get_page(name)
-        if len(page.images) > 0:
-            try:
-                image = page.images[0]
-                u = urlopen(image)
-                raw = u.read()
-                u.close()
-                im = Image.open(io.BytesIO(raw))
-                print(im.width, im.height)
-                ratio = im.width/im.height
-                photo = ImageTk.PhotoImage(im.resize((int(200*ratio), 200)))
-                self.image_overview.config(image=photo)
-                self.image_overview.image = photo
-            except:
-                print('No image.')
-        if not page:
-            self.error_label.config(text="Page '" + name + "' not found. Perhaps your request is too ambiguous?")
+        self.page = f.get_page(name)
+        
+        if not self.page:
+            self.error_label.config(text="self.page '" + name + "' not found. Perhaps your request is too ambiguous?")
             return
-        treeview_data = f.extract_headers(page.html())
+        treeview_data = f.extract_headers(self.page.html())
         #clear treeview
         self.treeview.delete(*self.treeview.get_children())
         for item in treeview_data:
@@ -69,80 +54,63 @@ class App(ttk.Frame):
         while i > 0:
             try:
                 self.treeview.selection_set(str(len(treeview_data) - 1))
+                self.treeview.see(str(len(treeview_data) - 1))
                 break
             except tk.TclError:
                 i -= 1
                 continue
-        self.treeview.see("7")
         
-        title = page.title
+        title = self.page.title
         #set title of wiki info
         self.wiki_info_title.config(text=title)
         #set summary of wiki info
         tss = ""
         #set tss to nearest sentence to the first 1000 characters of the summary
-        tss = f.get_summary(page.summary, 1000)
+        tss = f.get_summary(self.page.summary, 1000)
         self.wiki_info_summary.config(text=tss)
-        self.wiki_info_popularity.config(text="Popularity: " + str(len(page.links)))
-        
-        #self.setup_graph_view(page.title, page.links)
-        
-    def setup_graph_view(self, centre, links):
-        #remove old graph
-        for graph in self.graphs:
-            graph.destroy()
+        self.wiki_info_popularity.config(text="Popularity: " + str(len(self.page.links)))
+        self.wiki_info_length.config(text="Length: " + str(len(self.page.content)))
+        if len(self.page.images) > 0:
+            try:
+                image = self.page.images[0]
+                u = urlopen(image)
+                raw = u.read()
+                u.close()
+                im = Image.open(io.BytesIO(raw))
+                ratio = im.width/im.height
+                photo = ImageTk.PhotoImage(im.resize((int(200*ratio), 200)))
+                self.image_overview.config(image=photo)
+                self.image_overview.image = photo
+            except:
+                print('No image.')
+                self.image_overview.config(image="")
+                
+        for i in range(0, len(self.stats)):
+            #destroy old stats
+            self.stats[i].destroy()
             
-        
-        #create graph G with centre node and links, each node has a position
-        G = nx.Graph()
-        G.add_node(centre, pos=(0, 0))
-        #generate array of tuples of positions in circle
-        poss = []
-        for x in range(len(links)):
-            poss.append((0.5 * math.cos(2 * math.pi * x / len(links)), 0.5 * math.sin(2 * math.pi * x / len(links))))
-        
-        for link in links:
-            G.add_node(link, pos=poss[links.index(link)])
-            G.add_edge(centre, link)
-        
-        
-        
-        # position is stored as node attribute data for random_geometric_graph
-        pos = nx.get_node_attributes(G, "pos")
-        
-        dmin = 1
-        ncenter = 0
-        for n in pos:
-            x, y = pos[n]
-            d = (x - 0.5) ** 2 + (y - 0.5) ** 2
-            if d < dmin:
-                ncenter = n
-                dmin = d
-        
-        # color by path length from node near center
-        p = dict(nx.single_source_shortest_path_length(G, ncenter))
-        
-        fig = plt.figure(figsize=(4, 6))
-        nx.draw_networkx_edges(G, pos, nodelist=[ncenter], alpha=0.4)
-        nx.draw_networkx_nodes(
-            G,
-            pos,
-            nodelist=list(p.keys()),
-            node_size=80,
-            node_color=list(p.values()),
-            cmap=plt.cm.Reds_r,
-        )
-
-        plt.xlim(-0.05, 1.05)
-        plt.ylim(-0.05, 1.05)
-        plt.axis("off")
-        figure_canvas = FigureCanvasTkAgg(fig, self.graph_view_frame)
-        nav = NavigationToolbar2Tk(figure_canvas, self.graph_view_frame)
-        figure_canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-        self.graphs.append(figure_canvas.get_tk_widget())
-        #append navigation toolbar to graph view frame
-        self.graphs.append(nav)
-        
+        stats = supabase.table("data").select("*").execute()
+        checkquered = False
+        i = 1
+        for row in stats.data:
+            name = row['article_name']
+            views = row['article_views']
+            left = ttk.Label(self.stat_frame, text=name)
+            left.grid(row=i, column=0, sticky="w")
+            right = ttk.Label(self.stat_frame, text=views)
+            right.grid(row=i, column=1, sticky="e")
+            self.stats.extend([left, right])
+            if name == title:
+                checkquered = True
+                supabase.table("data").update({"article_views": row['article_views'] + 1}).eq("article_name", name).execute()
+            i += 1
+        if not checkquered:
+            supabase.table("data").insert({"article_name": title, "article_views": 1}).execute()
+            left = ttk.Label(self.stat_frame, text=title)
+            left.grid(row=i, column=0, sticky="w")
+            right = ttk.Label(self.stat_frame, text=1)
+            right.grid(row=i, column=1, sticky="e")
+            self.stats.extend([left, right])
 
     def setup_gui(self):
         #title frame
@@ -195,7 +163,7 @@ class App(ttk.Frame):
         self.warning_seperator.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(10, 10))
         self.lookup_warning_label = ttk.Label(self.lookup_frame, text="Also, do not click anywhere when the program is looking up a wiki.", font=("-size", 10))
         self.lookup_warning_label.grid(row=4, column=0, columnspan=2, sticky="nsew")
-        self.label_p2 = ttk.Label(self.lookup_frame, text="Lookup takes time (downloading data) and python is not multithreaded so it crashes.", font=("-size", 10))
+        self.label_p2 = ttk.Label(self.lookup_frame, text="Lookup takes time (downloading data) and python is not multithreaded by default so it crashes.", font=("-size", 10))
         self.label_p2.grid(row=5, column=0, columnspan=2, sticky="nsew")
         
         
@@ -205,11 +173,11 @@ class App(ttk.Frame):
             row=2, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew", rowspan=6, columnspan=3
         )
         #title of wiki info
-        self.wiki_info_title = ttk.Label(self.wiki_info_frame, text="e", font=("-size", 20, "-weight", "bold"), cursor='hand2')
-        self.wiki_info_title.bind("<Button-1>", lambda e: f.open_page(self.wiki_info_title.cget("text")))
+        self.wiki_info_title = ttk.Label(self.wiki_info_frame, text="", font=("-size", 20, "-weight", "bold"), cursor='hand2', foreground="blue")
+        self.wiki_info_title.bind("<Button-1>", lambda e: f.open_page(self.page.url))
         self.wiki_info_title.grid(row=0, column=0, sticky="nsew")
         #summary of wiki info, wrap length is 750
-        self.wiki_info_summary = ttk.Label(self.wiki_info_frame, text="e", wraplength=750, font=("-size", 15))
+        self.wiki_info_summary = ttk.Label(self.wiki_info_frame, text="", wraplength=750, font=("-size", 15))
         self.wiki_info_summary.grid(row=1, column=0, sticky="nsew")
         self.summ_divider = ttk.Separator(self.wiki_info_frame, orient="horizontal", style="Divider.TSeparator")
         self.summ_divider.grid(row=3, column=0, sticky="ew", pady=10)
@@ -217,8 +185,11 @@ class App(ttk.Frame):
         self.image_overview = ttk.Label(self.wiki_info_frame)
         self.image_overview.grid(row=2, column=0, sticky="nsew")
         #popularity label
-        self.wiki_info_popularity = ttk.Label(self.wiki_info_frame, text="Popularity: e", font=("-size", 15))
+        self.wiki_info_popularity = ttk.Label(self.wiki_info_frame, text="", font=("-size", 15))
         self.wiki_info_popularity.grid(row=4, column=0, sticky="nsew")
+        
+        self.wiki_info_length = ttk.Label(self.wiki_info_frame, text="", font=("-size", 15))
+        self.wiki_info_length.grid(row=5, column=0, sticky="nsew")
         
         #headers frame
         self.wiki_headers_frame = ttk.LabelFrame(self, text="Wiki Headers", padding=(20, 10))
@@ -245,11 +216,18 @@ class App(ttk.Frame):
         self.treeview.column(1, anchor="w", width=120)
         self.treeview.column(2, anchor="w", width=120)
         
-        #graph view frame
-        self.graph_view_frame = ttk.LabelFrame(self, text="Graph View", padding=(20, 10))
-        self.graph_view_frame.grid(
+        #stat frame
+        self.stat_frame = ttk.LabelFrame(self, text="WikiData Stats", padding=(20, 10))
+        self.stat_frame.grid(
             row=4, column=3, padx=(20, 10), pady=(20, 10), sticky="nsew", rowspan=4, columnspan=6
         )
+        #give stat frame two columns
+        self.stat_frame.columnconfigure(0, weight=1)
+        #header labels
+        self.header_left = ttk.Label(self.stat_frame, text="Article", font=("-size", 15, "-weight", "bold"))
+        self.header_right = ttk.Label(self.stat_frame, text="Views", font=("-size", 15, "-weight", "bold"))
+        self.header_left.grid(row=0, column=0, sticky="nsew")
+        self.header_right.grid(row=0, column=1, sticky="w")
 
 def main():
     root = tk.Tk()
@@ -280,4 +258,3 @@ if __name__ == "__main__":
     
 #todo
 #multithreading
-#dark theme support with graph view
