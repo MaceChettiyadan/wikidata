@@ -271,6 +271,7 @@ class App(ttk.Frame):
 def main():
     root = tk.Tk() #init tkinter
     root.title("WikiData")
+    root.iconphoto(False, tk.PhotoImage(file='src/assets/logo.png'))
     sv_ttk.set_theme("light") #light by default
     app = App(root)
     app.pack(fill="both", expand=True)
