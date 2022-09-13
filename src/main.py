@@ -25,12 +25,19 @@ class App(ttk.Frame):
             
         self.graphs = []
         # Create widgets
-        self.setup_gui()
+        self.setup_gui() 
         
     def submit_wiki_name(self):
+        self.error_label.config(text="")
         name = self.lookup_input.get()
         page = f.get_page(name)
+        print(page)
+        if not page:
+            self.error_label.config(text="Page '" + name + "' not found. Perhaps your request is too ambiguous?")
+            return
         treeview_data = f.extract_headers(page.html())
+        #clear treeview
+        self.treeview.delete(*self.treeview.get_children())
         for item in treeview_data:
             parent, iid, text, values = item
             self.treeview.insert(
@@ -64,7 +71,7 @@ class App(ttk.Frame):
         self.wiki_info_summary.config(text=tss)
         self.wiki_info_popularity.config(text="Popularity: " + str(len(page.links)))
         
-        self.setup_graph_view(page.title, page.links)
+        #self.setup_graph_view(page.title, page.links)
         
     def setup_graph_view(self, centre, links):
         #remove old graph
@@ -135,14 +142,17 @@ class App(ttk.Frame):
             row=0, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew", rowspan=2, columnspan=2 #outside padding
         )
         #title label
-        self.title_label = ttk.Label(self.title_frame, text="WikiData", font=("-size", 25, "-weight", "bold"),)
+        self.title_label = ttk.Label(self.title_frame, text="WikiData", font=("-size", 25, "-weight", "bold"))
         self.title_label.grid(row=0, column=0, sticky="nsew")
+        #wikidata description
+        self.main_desc_label = ttk.Label(self.title_frame, text="A wiki lookup tool.")
+        self.main_desc_label.grid(row=1, column=0, sticky="nsew")
         #dark mode switch
         self.dark_mode_switch = ttk.Checkbutton(self.title_frame, text="Dark Mode", style="Switch.TCheckbutton", command=sv_ttk.toggle_theme)
-        self.dark_mode_switch.grid(row=1, column=0, sticky="nsew")
+        self.dark_mode_switch.grid(row=2, column=0, sticky="nsew")
         #quit button
         self.quit_button = ttk.Button(self.title_frame, text="Quit", command=self.quit, style="Accent.TButton")
-        self.quit_button.grid(row=2, column=0, sticky="nsew", columnspan=2)
+        self.quit_button.grid(row=3, column=0, sticky="nsew")
         #version label
         self.version_label = ttk.Label(self.title_frame, text="©Mace Chettiyadan | Version 1.0.0", font=("-size", 10))
         self.version_label.grid(row=20, column=2, sticky="nsew")
@@ -160,16 +170,19 @@ class App(ttk.Frame):
         #submit button
         self.submit_button = ttk.Button(self.lookup_frame, text="Lookup", style="Accent.TButton", command=self.submit_wiki_name)
         self.submit_button.grid(row=0, column=1, padx=5, pady=(0, 10), sticky="ew")
+        #red error text
+        self.error_label = ttk.Label(self.lookup_frame, text="", foreground="red")
+        self.error_label.grid(row=1, column=0, columnspan=2, sticky="nsew")
         #lookup how to label
         self.lookup_desc_label = ttk.Label(self.lookup_frame, text="Hint: Try not to use spaces. For example 'AmongUs' instead of 'Among Us'.", font=("-size", 10))
-        self.lookup_desc_label.grid(row=1, column=0, columnspan=2, sticky="nsew")
+        self.lookup_desc_label.grid(row=2, column=0, columnspan=2, sticky="nsew")
         #seperator row 2
         self.warning_seperator = ttk.Separator(self.lookup_frame, orient="horizontal")
-        self.warning_seperator.grid(row=2, column=0, columnspan=2, sticky="ew", pady=(10, 10))
+        self.warning_seperator.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(10, 10))
         self.lookup_warning_label = ttk.Label(self.lookup_frame, text="Also, do not click anywhere when the program is looking up a wiki.", font=("-size", 10))
-        self.lookup_warning_label.grid(row=3, column=0, columnspan=2, sticky="nsew")
+        self.lookup_warning_label.grid(row=4, column=0, columnspan=2, sticky="nsew")
         self.label_p2 = ttk.Label(self.lookup_frame, text="Lookup takes time (downloading data) and python is not multithreaded so it crashes.", font=("-size", 10))
-        self.label_p2.grid(row=4, column=0, columnspan=2, sticky="nsew")
+        self.label_p2.grid(row=5, column=0, columnspan=2, sticky="nsew")
         
         
         #wiki info frame

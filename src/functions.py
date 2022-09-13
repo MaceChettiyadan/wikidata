@@ -4,7 +4,10 @@ import webbrowser
 from bs4 import BeautifulSoup as bs
 
 def get_page(name):
-  return wikipedia.page(name)
+  try:
+    return wikipedia.page(name)
+  except:
+    return False
   
 def open_page(name):
   url = wikipedia.page(name).url
