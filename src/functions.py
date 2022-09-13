@@ -3,12 +3,15 @@ import wikipedia
 from bs4 import BeautifulSoup as bs
 
 def get_page(name):
+  #try getting page
   try:
     return wikipedia.page(name)
   except:
+    #return false if page not found
     return False
   
 def open_page(name):
+  #use webbrowser to open wikipedia page
   webbrowser.open(name)
 
 def extract_headers(html):
@@ -26,6 +29,7 @@ def extract_headers(html):
       value = values[0].text
       dic[num] = value
       
+    #dictionary formatting to correct tree structure
     treeview_data = []
     for key in dic:
       val = dic[key]
@@ -38,7 +42,7 @@ def extract_headers(html):
     
     
 def get_summary(string, chars):
-  ##nearest sentence to chars
+  #nearest sentence to chars
   val = ""
   if len(string) > chars:
     val = string[:chars]
