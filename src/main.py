@@ -1,4 +1,5 @@
 
+import io
 import math
 import tkinter as tk
 from tkinter import ttk
@@ -13,6 +14,9 @@ from matplotlib.backends.backend_tkagg import (
     NavigationToolbar2Tk
 )
 matplotlib.use('TkAgg')
+import tkinter as tk
+from PIL import Image, ImageTk
+from urllib.request import urlopen
 
 class App(ttk.Frame):
     def __init__(self, parent):
@@ -31,7 +35,20 @@ class App(ttk.Frame):
         self.error_label.config(text="")
         name = self.lookup_input.get()
         page = f.get_page(name)
-        print(page)
+        if len(page.images) > 0:
+            try:
+                image = page.images[0]
+                u = urlopen(image)
+                raw = u.read()
+                u.close()
+                im = Image.open(io.BytesIO(raw))
+                print(im.width, im.height)
+                ratio = im.width/im.height
+                photo = ImageTk.PhotoImage(im.resize((int(200*ratio), 200)))
+                self.image_overview.config(image=photo)
+                self.image_overview.image = photo
+            except:
+                print('No image.')
         if not page:
             self.error_label.config(text="Page '" + name + "' not found. Perhaps your request is too ambiguous?")
             return
@@ -62,12 +79,9 @@ class App(ttk.Frame):
         #set title of wiki info
         self.wiki_info_title.config(text=title)
         #set summary of wiki info
-        if len(page.summary.split('.')) >= 3:
-            tss = page.summary.split(".")[0] + "." + page.summary.split(".")[1] + "." + page.summary.split(".")[2] + "."
-        elif len(page.summary.split('.')) == 2:
-            tss = page.summary.split(".")[0] + "." + page.summary.split(".")[1] + "."
-        else:
-            tss = page.summary.split(".")[0] + "."
+        tss = ""
+        #set tss to nearest sentence to the first 1000 characters of the summary
+        tss = f.get_summary(page.summary, 1000)
         self.wiki_info_summary.config(text=tss)
         self.wiki_info_popularity.config(text="Popularity: " + str(len(page.links)))
         
@@ -198,10 +212,13 @@ class App(ttk.Frame):
         self.wiki_info_summary = ttk.Label(self.wiki_info_frame, text="e", wraplength=750, font=("-size", 15))
         self.wiki_info_summary.grid(row=1, column=0, sticky="nsew")
         self.summ_divider = ttk.Separator(self.wiki_info_frame, orient="horizontal", style="Divider.TSeparator")
-        self.summ_divider.grid(row=2, column=0, sticky="ew", pady=10)
+        self.summ_divider.grid(row=3, column=0, sticky="ew", pady=10)
+        #image overview
+        self.image_overview = ttk.Label(self.wiki_info_frame)
+        self.image_overview.grid(row=2, column=0, sticky="nsew")
         #popularity label
         self.wiki_info_popularity = ttk.Label(self.wiki_info_frame, text="Popularity: e", font=("-size", 15))
-        self.wiki_info_popularity.grid(row=3, column=0, sticky="nsew")
+        self.wiki_info_popularity.grid(row=4, column=0, sticky="nsew")
         
         #headers frame
         self.wiki_headers_frame = ttk.LabelFrame(self, text="Wiki Headers", padding=(20, 10))
@@ -264,5 +281,3 @@ if __name__ == "__main__":
 #todo
 #multithreading
 #dark theme support with graph view
-#images for articles
-#full stop bug

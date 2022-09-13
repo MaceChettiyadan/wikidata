@@ -39,8 +39,15 @@ def extract_headers(html):
     return [("", 0, "No headers found!", ("", "This article has no Headers"))]
     
     
-      
-    
-  
-  
+def get_summary(string, chars):
+  ##nearest sentence to chars
+  val = ""
+  if len(string) > chars:
+    val = string[:chars]
+  else:
+    return string
+  #find last period
+  last_period = val.rfind('.')
+  val = val[:last_period+1]
+  return val
   
