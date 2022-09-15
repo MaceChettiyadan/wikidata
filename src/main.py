@@ -4,8 +4,6 @@ import tkinter as tk
 from tkinter import ttk
 import functions as f
 import sv_ttk
-import tkinter as tk
-import tkinter as tk
 from PIL import Image, ImageTk
 from urllib.request import urlopen
 from supabase import create_client, Client
