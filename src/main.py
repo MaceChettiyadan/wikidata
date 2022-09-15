@@ -9,6 +9,7 @@ import tkinter as tk
 from PIL import Image, ImageTk
 from urllib.request import urlopen
 from supabase import create_client, Client
+import time
 
 #init supabase
 url = 'https://pqowrgcliihcpbmyiqio.supabase.co'
@@ -30,24 +31,23 @@ class App(ttk.Frame):
         # Create widgets
         self.setup_gui() 
         
-    def submit_wiki_name(self):
-        #clear errors
-        self.error_label.config(text="")
-        
-        #get page
-        name = self.lookup_input.get()
-        self.page = f.get_page(name)
-        
-        #if page does not exist, display error
-        if not self.page:
-            self.error_label.config(text="self.page '" + name + "' not found. Perhaps your request is too ambiguous?")
+    def tab_changed(self, event):
+        if self.page is None:
             return
+        #check if current tab is headers
+        if event.widget.select().split(".")[-1] == '!frame2':
+            self.render_headers()
         
-        #extract headers to display
+        
+    def render_headers(self):
+        t = time.time()
+        self.updateStatus("Loading...")
+        # #extract headers to display
         treeview_data = f.extract_headers(self.page.html())
         
         #clear treeview
         self.treeview.delete(*self.treeview.get_children())
+        
         for item in treeview_data:
             parent, iid, text, values = item
             self.treeview.insert(
@@ -67,6 +67,26 @@ class App(ttk.Frame):
             except tk.TclError:
                 i -= 1
                 continue
+        self.updateStatus("Time taken: " + str(time.time() - t) + "s")
+        
+    def submit_wiki_name(self):
+        #get time
+        t = time.time()
+        
+        self.updateStatus("Loading...")
+        
+        #clear errors
+        self.error_label.config(text="")
+        
+        #get page
+        name = self.lookup_input.get()
+        self.page = f.get_page(name)
+        
+        #if page does not exist, display error
+        if not self.page:
+            self.error_label.config(text= name + "' not found. Perhaps your request is too ambiguous?")
+            self.updateStatus("")
+            return
         
         title = self.page.title
         #set title of wiki info
@@ -130,6 +150,13 @@ class App(ttk.Frame):
             right = ttk.Label(self.stat_frame, text=1)
             right.grid(row=i, column=1, sticky="e")
             self.stats.extend([left, right])
+            
+        self.updateStatus("Time taken: " + str(time.time() - t) + "s")
+        
+    def updateStatus(self, text):
+        self.time_label.config(text=text)
+        self.update()
+        self.update_idletasks()
 
     def setup_gui(self):
         #title frame
@@ -185,25 +212,33 @@ class App(ttk.Frame):
         self.error_label = ttk.Label(self.lookup_frame, text="", foreground="red")
         self.error_label.grid(row=1, column=0, columnspan=2, sticky="nsew")
         
-        #lookup how to label
-        self.lookup_desc_label = ttk.Label(self.lookup_frame, text="Hint: Try not to use spaces. For example 'AmongUs' instead of 'Among Us'.", font=("-size", 10))
-        self.lookup_desc_label.grid(row=2, column=0, columnspan=2, sticky="nsew")
+        #time label
+        self.time_label = ttk.Label(self.lookup_frame, text="", font=('-weight', 'bold'))
+        self.time_label.grid(row=2, column=0, columnspan=2, sticky="nsew")
         
         #seperator row 2
         self.warning_seperator = ttk.Separator(self.lookup_frame, orient="horizontal")
         self.warning_seperator.grid(row=3, column=0, columnspan=2, sticky="ew", pady=(10, 10))
         
         #warning label
-        self.lookup_warning_label = ttk.Label(self.lookup_frame, text="Also, do not click anywhere when the program is looking up a wiki.", font=("-size", 10))
+        self.lookup_warning_label = ttk.Label(self.lookup_frame, text="Do not click anywhere when the program is looking up a wiki.", font=("-size", 10))
         self.lookup_warning_label.grid(row=4, column=0, columnspan=2, sticky="nsew")
-        self.label_p2 = ttk.Label(self.lookup_frame, text="Lookup takes time (downloading data) and python is not multithreaded by default so it crashes.", font=("-size", 10))
-        self.label_p2.grid(row=5, column=0, columnspan=2, sticky="nsew")
+        self.label_p2 = ttk.Label(self.lookup_frame, text="Lookup takes time (downloading data) and tkinter is not multithreaded by default so it crashes.", font=("-size", 10))
+        self.label_p2.grid(row=6, column=0, columnspan=2, sticky="nsew")
         
-        #wiki info frame
-        self.wiki_info_frame = ttk.LabelFrame(self, text="Wiki Info", padding=(10, 10))
-        self.wiki_info_frame.grid(
-            row=2, column=0, padx=(20, 10), pady=(20, 10), sticky="nsew", rowspan=6, columnspan=3
-        )
+
+        self.paned = ttk.Panedwindow(self)
+        self.paned.grid(row=2, column=0, rowspan=6, columnspan=9, sticky="nsew")
+        self.sum_frame = ttk.Frame(self.paned, padding=(20, 10))
+        self.paned.add(self.sum_frame, weight=1)
+        self.notebook = ttk.Notebook(self.sum_frame)
+        self.notebook.pack(fill="both", expand=True)
+        self.wiki_info_frame = ttk.Frame(self.notebook, padding=(20, 10))
+        self.notebook.add(self.wiki_info_frame, text="Summary")
+        
+        #give wiki_info_frame 3 columns
+        for i in range(3):
+            self.wiki_info_frame.columnconfigure(i, weight=1)
         
         #title of wiki info
         self.wiki_info_title = ttk.Label(self.wiki_info_frame, text="", font=("-size", 20, "-weight", "bold"), cursor='hand2', foreground="blue")
@@ -215,8 +250,6 @@ class App(ttk.Frame):
         #summary of wiki info, wrap length is 750
         self.wiki_info_summary = ttk.Label(self.wiki_info_frame, text="", wraplength=750, font=("-size", 15))
         self.wiki_info_summary.grid(row=1, column=0, sticky="nsew")
-        self.summ_divider = ttk.Separator(self.wiki_info_frame, orient="horizontal", style="Divider.TSeparator")
-        self.summ_divider.grid(row=3, column=0, sticky="ew", pady=10)
         
         #image overview
         self.image_overview = ttk.Label(self.wiki_info_frame)
@@ -224,15 +257,16 @@ class App(ttk.Frame):
         
         #popularity label
         self.wiki_info_popularity = ttk.Label(self.wiki_info_frame, text="", font=("-size", 15))
-        self.wiki_info_popularity.grid(row=4, column=0, sticky="nsew")
+        self.wiki_info_popularity.grid(row=0, column=2, sticky="nsew")
         self.wiki_info_length = ttk.Label(self.wiki_info_frame, text="", font=("-size", 15))
-        self.wiki_info_length.grid(row=5, column=0, sticky="nsew")
+        self.wiki_info_length.grid(row=1, column=2, sticky="nsew")
         
-        #headers frame
-        self.wiki_headers_frame = ttk.LabelFrame(self, text="Wiki Headers", padding=(20, 10))
-        self.wiki_headers_frame.grid(
-            row=0, column=3, padx=(20, 10), pady=(20, 10), sticky="nsew", rowspan=4, columnspan=6
-        )
+        self.wiki_headers_frame = ttk.Frame(self.notebook, padding=(20, 10))
+        self.notebook.add(self.wiki_headers_frame, text="Headers")
+        
+        #trigger function when tab is clicked
+        self.notebook.bind("<<NotebookTabChanged>>", self.tab_changed)
+    
         
         self.scrollbar = ttk.Scrollbar(self.wiki_headers_frame)
         self.scrollbar.pack(side="right", fill="y")
@@ -257,7 +291,7 @@ class App(ttk.Frame):
         #stat frame
         self.stat_frame = ttk.LabelFrame(self, text="WikiData Stats", padding=(20, 10))
         self.stat_frame.grid(
-            row=4, column=3, padx=(20, 10), pady=(20, 10), sticky="nsew", rowspan=4, columnspan=6
+            row=0, column=3, padx=(20, 10), pady=(20, 10), sticky="nsew", rowspan=2, columnspan=6
         )
         #give stat frame two columns
         self.stat_frame.columnconfigure(0, weight=1)

@@ -3,6 +3,8 @@ import wikipedia
 from bs4 import BeautifulSoup as bs
 
 def get_page(name):
+  #remove spaces
+  name = name.replace(" ", "")
   #try getting page
   try:
     return wikipedia.page(name)
