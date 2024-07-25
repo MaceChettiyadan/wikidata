@@ -9,5 +9,3 @@ Make sure to smash that review button.
 ### If it doesn't work
 1. Make sure you are in the right directory. Extracting a zip usually results in an identically named folder within another. Make sure you are in the inner folder.
 2. You may not have python or pip. If you do not have python, go to the website and download it. If you have python (can be tested by typing `python` in the command line) but not pip, type `python -m ensurepip --upgrade` in the command line.
-
-If there are persisting issues, [email me](mailto:mace.chettiyadan@student.education.wa.edu.au).
